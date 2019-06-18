@@ -20,13 +20,13 @@ class Abot(Service):
                 user = os.getenv('MQTT_USER', "arcus")
                 password = os.getenv('MQTT_PASSWORD', "arcus")
 
-                _LOGGER.info("Deploying vernemq")
+                _LOGGER.info("Deploying VerneMQ")
                 await spawner.deploy_service("vernemq",
                                              "erlio/docker-vernemq",
                                              {"DOCKER_VERNEMQ_USER_" + user.upper(): password},
                                              {},
                                              {'1883/tcp': 1883})
-                _LOGGER.info("Waiting for vernemq")
+                _LOGGER.info("Waiting for VerneMQ")
                 await asyncio.sleep(20)
 
     @match_service('')

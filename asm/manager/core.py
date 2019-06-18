@@ -52,7 +52,6 @@ class ArcusServiceManager:
 
         self.connectors = []
         self.connector_tasks = []
-
         connectors = os.getenv('ARCUS_CONNECTORS', [])
         for connector in connectors:
             self.config['connectors'].append({"name": connector})
@@ -113,6 +112,7 @@ class ArcusServiceManager:
 
         _LOGGER.info("Removing services...")
         for service in self.services:
+            _LOGGER.info("Removed %s", service.config["name"])
             self.services.remove(service)
 
         for connector in self.connectors:
