@@ -1,0 +1,8 @@
+tests
+logs/*
+venv
+.git
+.gitignore
+README.md
+Makefile
+Dockerfile
