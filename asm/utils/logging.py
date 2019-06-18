@@ -108,7 +108,7 @@ def configure_logging(config):
 
         rootlogger.addHandler(file_handler)
     _LOGGER.info("=" * 40)
-    _LOGGER.info("Service started")
+    _LOGGER.info("Starting service")
     _LOGGER.info("=" * 40)
 
 

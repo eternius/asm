@@ -18,35 +18,44 @@ _LOGGER = logging.getLogger(__name__)
 class ArcusServiceManager:
     instances = []
 
-    def __init__(self, name, database=False):
-        self.name = name
+    def __init__(self):
         self._running = False
-        self.connectors = []
-        self.connector_tasks = []
         self.sys_status = 0
+        self.modules = {}
+        self.web_server = None
+        self.cron_task = None
+        self.stored_path = []
+
         self.eventloop = asyncio.get_event_loop()
         if os.name != "nt":
             for sig in (signal.SIGINT, signal.SIGTERM):
                 self.eventloop.add_signal_handler(
                     sig, lambda: asyncio.ensure_future(self.handle_signal())
                 )
-        self.modules = {}
-        self.services = []
-        self.services_tasks = []
-        self.web_server = None
-        self.cron_task = None
-        self.start_database = database
-        self.stored_path = []
 
         self.config = {"services": [], "databases": [], "connectors": []}
-        self.config['services'].append({"name": name})
-        if database:
+
+        service = os.getenv('ARCUS_SERVICE', "dummy")
+        self.name = service
+        self.services = []
+        self.services_tasks = []
+        self.config['services'].append({"name": service})
+
+        self.start_database = os.getenv('ARCUS_SERVICE_USER_DB', False)
+        if self.start_database:
             self.config['databases'].append({"name": "mongo",
                                              "host": os.getenv('MONGO_HOST', "mongodb"),
                                              "port": os.getenv('MONGO_PORT', "27017"),
                                              "database": os.getenv('MONGO_DB', "arcus"),
                                              "user": os.getenv('MONGO_USER', "arcus"),
                                              "password": os.getenv('MONGO_PASSWORD', "arcus&arcus")})
+
+        self.connectors = []
+        self.connector_tasks = []
+
+        connectors = os.getenv('ARCUS_CONNECTORS', [])
+        for connector in connectors:
+            self.config['connectors'].append({"name": connector})
         self.config['connectors'].append({"name": "mqtt"})
 
         self.loader = Loader(self)
