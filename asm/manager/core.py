@@ -36,7 +36,7 @@ class ArcusServiceManager:
         self.config = {"services": [], "databases": [], "connectors": []}
 
         service = os.getenv('ARCUS_SERVICE', "dummy")
-        self.name = service
+        self.name = os.getenv('ARCUS_SERVICE_NAME', service)
         self.services = []
         self.services_tasks = []
         self.config['services'].append({"name": service})
