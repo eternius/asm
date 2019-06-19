@@ -1,4 +1,3 @@
-import os
 import sys
 import logging
 
@@ -13,6 +12,7 @@ def main():
     configure_logging({})
 
     with ArcusServiceManager() as service:
+        service.eventloop.run_until_complete(service.setup_platform())
         service.load()
         service.run()
 

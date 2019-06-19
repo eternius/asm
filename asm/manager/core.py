@@ -6,11 +6,16 @@ import weakref
 import asyncio
 import contextlib
 import logging
+import yaml
 
 from asm.utils.web import Web
 from asm.utils.loader import Loader
 from asm.connector import Connector
 from asm.service import Service
+from asm.service.abot.dockerspawner import DockerSpawner
+from minio import Minio
+from minio.error import (ResponseError, BucketAlreadyOwnedByYou,
+                         BucketAlreadyExists)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -19,6 +24,7 @@ class ArcusServiceManager:
     instances = []
 
     def __init__(self):
+        self.name = os.getenv('ARCUS_SERVICE', "dummy")
         self._running = False
         self.sys_status = 0
         self.modules = {}
@@ -33,30 +39,11 @@ class ArcusServiceManager:
                     sig, lambda: asyncio.ensure_future(self.handle_signal())
                 )
 
-        self.config = {"services": [], "databases": [], "connectors": []}
-
-        service = os.getenv('ARCUS_SERVICE', "dummy")
-        self.name = os.getenv('ARCUS_SERVICE_NAME', service)
+        self.config = {}
         self.services = []
         self.services_tasks = []
-        self.config['services'].append({"name": service})
-
-        self.start_database = os.getenv('ARCUS_SERVICE_USER_DB', False)
-        if self.start_database:
-            self.config['databases'].append({"name": "mongo",
-                                             "host": os.getenv('MONGO_HOST', "mongodb"),
-                                             "port": os.getenv('MONGO_PORT', "27017"),
-                                             "database": os.getenv('MONGO_DB', "arcus"),
-                                             "user": os.getenv('MONGO_USER', "arcus"),
-                                             "password": os.getenv('MONGO_PASSWORD', "arcus&arcus")})
-
         self.connectors = []
         self.connector_tasks = []
-        connectors = os.getenv('ARCUS_CONNECTORS', [])
-        for connector in connectors:
-            self.config['connectors'].append({"name": connector})
-        self.config['connectors'].append({"name": "mqtt"})
-
         self.loader = Loader(self)
 
     def __enter__(self):
@@ -92,6 +79,7 @@ class ArcusServiceManager:
         await self.unload()
 
     def load(self):
+        self.config = self.loader.load_config_from_minio()
         self.modules = self.loader.load_modules_from_config(self.config)
         _LOGGER.debug("Loaded %i services", len(self.modules["services"]))
         self.get_functions(self.modules["services"])
@@ -100,7 +88,7 @@ class ArcusServiceManager:
         self.web_server = Web(self)
         self.web_server.setup_webhooks(self.services)
 
-        if self.start_database:
+        if len(self.config['databases']) > 0:
             self.start_databases(self.modules["databases"])
 
         self.eventloop.create_task(self.web_server.start())
@@ -121,7 +109,7 @@ class ArcusServiceManager:
             self.connectors.remove(connector)
             _LOGGER.info("Stopped connector %s", connector.name)
 
-        if self.start_database:
+        if len(self.config['databases']) > 0:
             for database in self.memory.databases:
                 _LOGGER.info("Stopping database %s...", database.name)
                 await database.disconnect()
@@ -236,3 +224,79 @@ class ArcusServiceManager:
                 self.eventloop.run_until_complete(service.setup())
         else:
             self.critical("All services failed to setup", 1)
+
+    @staticmethod
+    async def setup_platform():
+        _LOGGER.info("Setting up the platform")
+        if os.path.exists("/var/run/docker.sock"):
+            spawner = DockerSpawner()
+
+        if spawner:
+            # MQTT
+            user = os.getenv('MQTT_USER', "arcus")
+            password = os.getenv('MQTT_PASSWORD', "arcus")
+
+            if not await spawner.exist_service("vernemq"):
+
+                _LOGGER.info("Deploying VerneMQ")
+                await spawner.deploy_service("vernemq",
+                                             "erlio/docker-vernemq:latest",
+                                             None,
+                                             {"DOCKER_VERNEMQ_USER_" + user.upper(): password},
+                                             {},
+                                             {'1883/tcp': 1883})
+                _LOGGER.info("Waiting for VerneMQ")
+                await asyncio.sleep(20)
+
+            mqtt = await spawner.get_container("vernemq")
+            if mqtt.status != "running":
+                mqtt.start()
+                await asyncio.sleep(20)
+
+            # MINIO
+            access_key = os.getenv('MINIO_ACCESS_KEY', "arcusarcus")
+            secret_key = os.getenv('MINIO_SECRET_KEY', "arcusarcus")
+
+            if not await spawner.exist_service("minio"):
+
+                _LOGGER.info("Deploying Minio")
+                await spawner.deploy_service("minio",
+                                             "minio/minio:latest",
+                                             "server /data",
+                                             {"MINIO_ACCESS_KEY": access_key, "MINIO_SECRET_KEY": secret_key},
+                                             {'/data': {'bind': '/opt/arcus/data/minio_data', 'mode': 'rw'},
+                                              '/root/.minio': {'bind': '/opt/arcus/data/minio_config', 'mode': 'rw'}},
+                                             {'9000/tcp': 9000})
+                _LOGGER.info("Waiting for Minio")
+                await asyncio.sleep(20)
+
+                minioClient = Minio('minio:9000',
+                                    access_key=access_key,
+                                    secret_key=secret_key,
+                                    secure=False)
+
+                try:
+                    minioClient.make_bucket("abot", location="us-east-1")
+                except BucketAlreadyOwnedByYou as err:
+                    pass
+                except BucketAlreadyExists as err:
+                    pass
+                except ResponseError as err:
+                    raise
+                else:
+                    # Create Abot service configuration
+                    config = {"services": [{"name": "abot"}],
+                              "databases": [],
+                              "connectors": [{"name": "mqtt"}]}
+                    with open('config.yml', 'w') as outfile:
+                        yaml.dump(config, outfile, default_flow_style=False)
+                    try:
+                        minioClient.fput_object('abot', 'config.yml', 'config.yml')
+                    except ResponseError as err:
+                        print(err)
+
+            minio = await spawner.get_container("minio")
+            if minio.status != "running":
+                minio.start()
+                await asyncio.sleep(20)
+

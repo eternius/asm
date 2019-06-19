@@ -1,8 +1,12 @@
 import os
 import logging
 import importlib.util
+import yaml
+
 from pkg_resources import iter_entry_points
 from collections.abc import Mapping
+from minio import Minio
+from minio.error import ResponseError
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -90,6 +94,29 @@ class Loader:
                 _LOGGER.error("Module %s failed to import.", config["name"])
 
         return loaded_modules
+
+    @staticmethod
+    def load_config_from_minio():
+        access_key = os.getenv('MINIO_ACCESS_KEY', "arcusarcus")
+        secret_key = os.getenv('MINIO_SECRET_KEY', "arcusarcus")
+        service = os.getenv('ARCUS_SERVICE', "dummy")
+
+        minioClient = Minio('minio:9000',
+                            access_key=access_key,
+                            secret_key=secret_key,
+                            secure=False)
+
+        try:
+            minioClient.fget_object(service, 'config.yml', 'config.yml')
+        except ResponseError as err:
+            print(err)
+
+        with open("config.yml", 'r') as stream:
+            try:
+                return yaml.safe_load(stream)
+            except yaml.YAMLError as exc:
+                _LOGGER.error("Error loading config.yaml.", exc)
+                return {"services": [], "databases": [], "connectors": []}
 
     def load_modules_from_config(self, config):
         """Load all module types based on config.

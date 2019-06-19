@@ -18,14 +18,23 @@ class DockerSpawner(Spawner):
         except NotFound:
             return False
 
-    async def deploy_service(self, service_name, image, env={}, volumes={}, ports={}):
+    async def deploy_service(self, service_name, image, command, env={}, volumes={}, ports={}):
         try:
-            self.client.containers.run(name=service_name,
-                                       image=image,
-                                       environment=env,
-                                       volumes=volumes,
-                                       ports=ports,
-                                       detach=True)
+            if command is None:
+                self.client.containers.run(name=service_name,
+                                           image=image,
+                                           environment=env,
+                                           volumes=volumes,
+                                           ports=ports,
+                                           detach=True)
+            else:
+                self.client.containers.run(name=service_name,
+                                           image=image,
+                                           command=command,
+                                           environment=env,
+                                           volumes=volumes,
+                                           ports=ports,
+                                           detach=True)
             return True
         except NotFound or ImageNotFound or APIError:
             _LOGGER.erro("Error deploying service %s", service_name)
@@ -39,3 +48,6 @@ class DockerSpawner(Spawner):
 
     async def create_secret(self, name, data):
         return self.client.secrets.create(name, bytes(data))
+
+    async def get_container(self, name):
+        return self.client.containers.get(name)
