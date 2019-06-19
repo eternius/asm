@@ -17,14 +17,26 @@ external-services:
         MINIO_SECRET_KEY: envvar-MINIO_SECRET_KEY
     command: server /data
     volumes:
-      - src: /data
-        dst: /opt/arcus/data/minio_data
+      - src: /opt/arcus/data/minio_data
+        dst: /data
         mode: rw
-      - src: /root/.minio
-        dst: /opt/arcus/data/minio_config
+      - src: /opt/arcus/data/minio_config
+        dst: /root/.minio
         mode: rw
     ports:
       - 9000: 9000
+  - name: arangodb
+    envvars:
+      - ARANGO_ROOT_PASSWORD: arcusarcus
+    image: arangodb:latest
+    env:
+      - ARANGO_ROOT_PASSWORD: envvar-ARANGO_ROOT_PASSWORD
+    volumes:
+      - src: /opt/arcus/data/arangodb3
+        dst: /var/lib/arangodb3
+        mode: rw
+    ports:
+      - 8529: 8529
 agents:
   - name: abot
     language: es
