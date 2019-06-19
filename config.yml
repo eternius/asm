@@ -2,4 +2,4 @@ connectors:
 - name: mqtt
 databases: []
 services:
-- name: abot
+- name: operator

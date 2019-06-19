@@ -67,7 +67,7 @@ class Connector:
 
         return super().__new__(cls)
 
-    def __init__(self, config, service=None):
+    def __init__(self, config, asm=None):
         """Create the connector.
         Set some basic properties from the connector config such as the name
         of this connector and the name the bot should appear with in
@@ -79,7 +79,7 @@ class Connector:
         self.name = ""
         self.config = config
         self.default_target = None
-        self.service = service
+        self.asm = asm
 
     @property
     def configuration(self):

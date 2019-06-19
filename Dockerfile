@@ -6,10 +6,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 	git \
 	gcc \
 	g++ \
+	libmariadbclient-dev \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /opt/st3
+WORKDIR /opt/arcus
 
-COPY . /opt/st3
+COPY . /opt/arcus
 
 RUN pip3 install -r requirements.txt
+
+CMD ["python3", "asm.py"]

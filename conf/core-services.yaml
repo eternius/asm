@@ -1,0 +1,32 @@
+external-services:
+  - name: mqtt
+    envvars:
+      - MQTT_PASSWORD: arcusarcus
+    image: erlio/docker-vernemq:latest
+    env:
+      - DOCKER_VERNEMQ_USER_ARCUS: envvar-MQTT_PASSWORD
+    ports:
+      - 1883: 1883
+  - name: minio
+    envvars:
+      - MINIO_ACCESS_KEY: arcusarcus
+        MINIO_SECRET_KEY: arcusarcus
+    image: minio/minio:latest
+    env:
+      - MINIO_ACCESS_KEY: envvar-MINIO_ACCESS_KEY
+        MINIO_SECRET_KEY: envvar-MINIO_SECRET_KEY
+    command: server /data
+    volumes:
+      - src: /data
+        dst: /opt/arcus/data/minio_data
+        mode: rw
+      - src: /root/.minio
+        dst: /opt/arcus/data/minio_config
+        mode: rw
+    ports:
+      - 9000: 9000
+agents:
+  - name: abot
+    language: es
+    skills:
+      - abot

@@ -6,16 +6,12 @@ import weakref
 import asyncio
 import contextlib
 import logging
-import yaml
 
 from asm.utils.web import Web
 from asm.utils.loader import Loader
 from asm.connector import Connector
 from asm.service import Service
-from asm.service.abot.dockerspawner import DockerSpawner
-from minio import Minio
-from minio.error import (ResponseError, BucketAlreadyOwnedByYou,
-                         BucketAlreadyExists)
+
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -91,8 +87,8 @@ class ArcusServiceManager:
         if len(self.config['databases']) > 0:
             self.start_databases(self.modules["databases"])
 
-        self.eventloop.create_task(self.web_server.start())
         self.start_connectors(self.modules["connectors"])
+        self.eventloop.create_task(self.web_server.start())
 
     async def unload(self, future=None):
         """Stop the event loop."""
@@ -224,79 +220,3 @@ class ArcusServiceManager:
                 self.eventloop.run_until_complete(service.setup())
         else:
             self.critical("All services failed to setup", 1)
-
-    @staticmethod
-    async def setup_platform():
-        _LOGGER.info("Setting up the platform")
-        if os.path.exists("/var/run/docker.sock"):
-            spawner = DockerSpawner()
-
-        if spawner:
-            # MQTT
-            user = os.getenv('MQTT_USER', "arcus")
-            password = os.getenv('MQTT_PASSWORD', "arcus")
-
-            if not await spawner.exist_service("vernemq"):
-
-                _LOGGER.info("Deploying VerneMQ")
-                await spawner.deploy_service("vernemq",
-                                             "erlio/docker-vernemq:latest",
-                                             None,
-                                             {"DOCKER_VERNEMQ_USER_" + user.upper(): password},
-                                             {},
-                                             {'1883/tcp': 1883})
-                _LOGGER.info("Waiting for VerneMQ")
-                await asyncio.sleep(20)
-
-            mqtt = await spawner.get_container("vernemq")
-            if mqtt.status != "running":
-                mqtt.start()
-                await asyncio.sleep(20)
-
-            # MINIO
-            access_key = os.getenv('MINIO_ACCESS_KEY', "arcusarcus")
-            secret_key = os.getenv('MINIO_SECRET_KEY', "arcusarcus")
-
-            if not await spawner.exist_service("minio"):
-
-                _LOGGER.info("Deploying Minio")
-                await spawner.deploy_service("minio",
-                                             "minio/minio:latest",
-                                             "server /data",
-                                             {"MINIO_ACCESS_KEY": access_key, "MINIO_SECRET_KEY": secret_key},
-                                             {'/data': {'bind': '/opt/arcus/data/minio_data', 'mode': 'rw'},
-                                              '/root/.minio': {'bind': '/opt/arcus/data/minio_config', 'mode': 'rw'}},
-                                             {'9000/tcp': 9000})
-                _LOGGER.info("Waiting for Minio")
-                await asyncio.sleep(20)
-
-                minioClient = Minio('minio:9000',
-                                    access_key=access_key,
-                                    secret_key=secret_key,
-                                    secure=False)
-
-                try:
-                    minioClient.make_bucket("abot", location="us-east-1")
-                except BucketAlreadyOwnedByYou as err:
-                    pass
-                except BucketAlreadyExists as err:
-                    pass
-                except ResponseError as err:
-                    raise
-                else:
-                    # Create Abot service configuration
-                    config = {"services": [{"name": "abot"}],
-                              "databases": [],
-                              "connectors": [{"name": "mqtt"}]}
-                    with open('config.yml', 'w') as outfile:
-                        yaml.dump(config, outfile, default_flow_style=False)
-                    try:
-                        minioClient.fput_object('abot', 'config.yml', 'config.yml')
-                    except ResponseError as err:
-                        print(err)
-
-            minio = await spawner.get_container("minio")
-            if minio.status != "running":
-                minio.start()
-                await asyncio.sleep(20)
-

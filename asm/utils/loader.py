@@ -107,7 +107,7 @@ class Loader:
                             secure=False)
 
         try:
-            minioClient.fget_object(service, 'config.yml', 'config.yml')
+            minioClient.fget_object("services-" + service, 'config.yml', 'config.yml')
         except ResponseError as err:
             print(err)
 

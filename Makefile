@@ -1,8 +1,8 @@
-PROJECT_REPO=st3images
-VERSION=3.1dev
+PROJECT_REPO=eternius
+VERSION=latest
 
 build:
-	docker build -t ${PROJECT_REPO}/st3reactor:${VERSION} .
+	docker build -t ${PROJECT_REPO}/arcusservice:${VERSION} .
 
 push:
-    docker push ${PROJECT_REPO}/st3reactor:${VERSION}
+    docker push ${PROJECT_REPO}/arcusservice:${VERSION}

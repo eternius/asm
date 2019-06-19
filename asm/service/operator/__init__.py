@@ -6,10 +6,7 @@ from asm.utils.matchers import match_service
 _LOGGER = logging.getLogger(__name__)
 
 
-class Abot(Service):
-    async def setup(self):
-        pass
-
+class Operator(Service):
     @match_service('')
     async def parse(self):
-        _LOGGER.info("Service")
+        _LOGGER.info("Operator Service")
