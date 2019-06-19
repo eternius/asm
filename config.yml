@@ -2,4 +2,6 @@ connectors:
 - name: mqtt
 databases: []
 services:
-- name: operator
+- language: es
+  name: nlp
+  skill-id: abot

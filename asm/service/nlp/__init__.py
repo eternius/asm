@@ -10,15 +10,14 @@ from rasa.nlu.config import RasaNLUModelConfig
 
 _LOGGER = logging.getLogger(__name__)
 
-NLU_DEFAULT_LANGUAGE = "en"
-
 
 class Nlp(Service):
     async def setup(self):
         _LOGGER.info("Starting NLU training.")
+        lang = self.config.modules['services'][0]['config']['language']
         if not os.path.exists('data/model'):
-            data, domain_data, stories = GenerateStories.run("data",
-                                                             self.config.get("language", NLU_DEFAULT_LANGUAGE))
+            data, domain_data, stories = await GenerateStories.run("data",
+                                                                   lang)
         training_data = TrainingData(training_examples=data)
 
         pipeline = [
@@ -29,7 +28,7 @@ class Nlp(Service):
             {"name": "EmbeddingIntentClassifier"}
         ]
 
-        nlu_config = RasaNLUModelConfig({"language": self.config.get("language", NLU_DEFAULT_LANGUAGE),
+        nlu_config = RasaNLUModelConfig({"language": lang,
                                          "pipeline": pipeline,
                                          "data": None})
 
@@ -40,7 +39,7 @@ class Nlp(Service):
 
     @match_service('')
     async def parse(self, asm, services, message, config):
-        text = GenerateStories.preprocessor(message.text, self.config.get("language", NLU_DEFAULT_LANGUAGE))
+        text = GenerateStories.preprocessor(message.text, config["language"])
 
         if asm.config.get('interpreter') is None:
             asm.config.setdefault('interpreter',

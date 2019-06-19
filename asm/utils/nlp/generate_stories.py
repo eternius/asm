@@ -37,7 +37,7 @@ class GenerateStories:
                        "slots": {},
                        "forms": []}
 
-        bot_document = openpyxl.load_workbook('./bot-data/bot.xlsx')
+        bot_document = openpyxl.load_workbook('data/bot.xlsx')
         sheet = bot_document.get_sheet_by_name('intents')
 
         intent_id = ""
