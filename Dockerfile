@@ -9,12 +9,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 	libmariadbclient-dev \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /opt/arcus
+WORKDIR /opt/arcus/service
 
-COPY . /opt/arcus
+RUN mkdir -p /opt/arcus/conf
+COPY . /opt/arcus/service
 
 RUN pip3 install -r requirements.txt
 
-RUN python3 ./asm/utils/nlp/nltk.py
+VOLUME /opt/arcus/conf/config.yml
 
 CMD ["python3", "asm.py"]

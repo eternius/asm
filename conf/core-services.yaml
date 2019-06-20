@@ -7,24 +7,6 @@ external-services:
       - DOCKER_VERNEMQ_USER_ARCUS: envvar-MQTT_PASSWORD
     ports:
       - 1883: 1883
-  - name: minio
-    envvars:
-      - MINIO_ACCESS_KEY: arcusarcus
-        MINIO_SECRET_KEY: arcusarcus
-    image: minio/minio:latest
-    env:
-      - MINIO_ACCESS_KEY: envvar-MINIO_ACCESS_KEY
-        MINIO_SECRET_KEY: envvar-MINIO_SECRET_KEY
-    command: server /data
-    volumes:
-      - src: /opt/arcus/data/minio_data
-        dst: /data
-        mode: rw
-      - src: /opt/arcus/data/minio_config
-        dst: /root/.minio
-        mode: rw
-    ports:
-      - 9000: 9000
   - name: arangodb
     envvars:
       - ARANGO_ROOT_PASSWORD: arcusarcus
@@ -32,9 +14,8 @@ external-services:
     env:
       - ARANGO_ROOT_PASSWORD: envvar-ARANGO_ROOT_PASSWORD
     volumes:
-      - src: /opt/arcus/data/arangodb3
+      - src: arangodb3
         dst: /var/lib/arangodb3
-        mode: rw
     ports:
       - 8529: 8529
 agents:

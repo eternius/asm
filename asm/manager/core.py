@@ -11,7 +11,8 @@ from asm.utils.web import Web
 from asm.utils.loader import Loader
 from asm.connector import Connector
 from asm.service import Service
-
+from asm.database import Database
+from asm.database import Memory
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -27,6 +28,7 @@ class ArcusServiceManager:
         self.web_server = None
         self.cron_task = None
         self.stored_path = []
+        self.memory = Memory()
 
         self.eventloop = asyncio.get_event_loop()
         if os.name != "nt":
@@ -75,7 +77,7 @@ class ArcusServiceManager:
         await self.unload()
 
     def load(self):
-        self.config = self.loader.load_config_from_minio()
+        self.config = self.loader.load_config_from_file()
         self.modules = self.loader.load_modules_from_config(self.config)
         _LOGGER.debug("Loaded %i services", len(self.modules["services"]))
         self.get_functions(self.modules["services"])
@@ -220,3 +222,17 @@ class ArcusServiceManager:
                 self.eventloop.run_until_complete(service.setup())
         else:
             self.critical("All services failed to setup", 1)
+
+    def start_databases(self, databases):
+        """Start the databases."""
+        for database_module in databases:
+            for name, cls in database_module["module"].__dict__.items():
+                if (
+                    isinstance(cls, type)
+                    and issubclass(cls, Database)
+                    and cls is not Database
+                ):
+                    _LOGGER.debug("Adding database: %s", name)
+                    database = cls(database_module["config"])
+                    self.memory.databases.append(database)
+                    self.eventloop.run_until_complete(database.connect())

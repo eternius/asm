@@ -1,7 +1,7 @@
 import logging
 import docker
 
-from asm.utils.spawner import Spawner
+from asm.utils.spawners.spawner import Spawner
 from docker.errors import NotFound, ImageNotFound, APIError
 
 _LOGGER = logging.getLogger(__name__)
@@ -37,12 +37,19 @@ class DockerSpawner(Spawner):
                     container.start()
 
                 return True
+            vols = {}
+            for key, value in volumes.items():
+                if key.startswith('conf'):
+                    key = '/opt/arcus/conf/' + key[5:]
+                else:
+                    key = '/opt/arcus/data/' + key
+                vols[key] = {'bind': value, 'mode': 'rw'}
 
             if command is None:
                 self.client.containers.run(name=service_name,
                                            image=image,
                                            environment=env,
-                                           volumes=volumes,
+                                           volumes=vols,
                                            ports=ports,
                                            network="arcus",
                                            detach=True)
@@ -51,7 +58,7 @@ class DockerSpawner(Spawner):
                                            image=image,
                                            command=command,
                                            environment=env,
-                                           volumes=volumes,
+                                           volumes=vols,
                                            network="arcus",
                                            ports=ports,
                                            detach=True)

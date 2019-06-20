@@ -1,7 +1,0 @@
-connectors:
-- name: mqtt
-databases: []
-services:
-- language: es
-  name: nlp
-  skill-id: abot

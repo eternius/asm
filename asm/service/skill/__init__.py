@@ -1,5 +1,6 @@
 import os
 import logging
+import nltk
 
 from asm.service import Service
 from asm.utils.matchers import match_service
@@ -13,6 +14,7 @@ _LOGGER = logging.getLogger(__name__)
 
 class Nlp(Service):
     async def setup(self):
+        nltk.download('punkt')
         _LOGGER.info("Starting NLU training.")
         lang = self.config.modules['services'][0]['config']['language']
         if not os.path.exists('data/model'):

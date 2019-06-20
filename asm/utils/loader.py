@@ -96,22 +96,8 @@ class Loader:
         return loaded_modules
 
     @staticmethod
-    def load_config_from_minio():
-        access_key = os.getenv('MINIO_ACCESS_KEY', "arcusarcus")
-        secret_key = os.getenv('MINIO_SECRET_KEY', "arcusarcus")
-        service = os.getenv('ARCUS_SERVICE', "dummy")
-
-        minioClient = Minio('minio:9000',
-                            access_key=access_key,
-                            secret_key=secret_key,
-                            secure=False)
-
-        try:
-            minioClient.fget_object("services-" + service, 'config.yml', 'config.yml')
-        except ResponseError as err:
-            print(err)
-
-        with open("config.yml", 'r') as stream:
+    def load_config_from_file():
+        with open("/opt/arcus/conf/config.yml", 'r') as stream:
             try:
                 return yaml.safe_load(stream)
             except yaml.YAMLError as exc:
