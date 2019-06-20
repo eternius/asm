@@ -9,7 +9,6 @@ from gmqtt.mqtt.constants import MQTTv311
 
 
 _LOGGER = logging.getLogger(__name__)
-STOP = asyncio.Event()
 
 
 class Mqtt(Connector):
@@ -30,7 +29,8 @@ class Mqtt(Connector):
 
     async def listen(self):
         self.client.subscribe(self.asm.name + "/#", qos=1)
-        await STOP.wait()
+        stop = asyncio.Event()
+        await stop.wait()
 
     @register_event(Message)
     async def respond(self, message):

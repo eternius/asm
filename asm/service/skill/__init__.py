@@ -1,5 +1,6 @@
 import os
 import logging
+import asyncio
 import nltk
 
 from asm.service import Service

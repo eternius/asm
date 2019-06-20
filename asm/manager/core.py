@@ -89,6 +89,7 @@ class ArcusServiceManager:
         self.web_server = Web(self)
         self.web_server.setup_webhooks(self.services)
 
+        asyncio.set_event_loop(self.eventloop)
         self.start_connectors(self.modules["connectors"])
         self.eventloop.create_task(self.web_server.start())
 
