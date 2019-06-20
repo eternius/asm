@@ -44,7 +44,7 @@ class Skill:
                     if row[INTENT_NAME].value != "intent":
                         if row[INTENT_NAME].value is not None:
                             if intent_id is not "":
-                                await db.put(name + "-intents", intent_id, intent)
+                                await db.put(name + "_intents", intent_id, intent)
                             intent_id = row[INTENT_NAME].value
 
                             intent = {"examples": [],
@@ -71,7 +71,9 @@ class Skill:
                                     slot_def = {"name": slot_item[SLOT_NAME].value,
                                                 "required": slot_item[SLOT_REQUIRED].value,
                                                 "type": slot_item[SLOT_TYPE].value,
-                                                "validation_function": slot_item[SLOT_VALIDATE_FUNCTION].value}
+                                                "validation_function": slot_item[SLOT_VALIDATE_FUNCTION].value,
+                                                "question": slot_item[SLOT_QUESTION].value,
+                                                "response_error": slot_item[SLOT_RESPONSE_ERROR].value}
                                     intent['slot'].append(slot_def)
 
             # Create Skill service configuration

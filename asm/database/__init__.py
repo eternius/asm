@@ -64,6 +64,16 @@ class Database:
         """
         raise NotImplementedError
 
+    async def get_keys(self, collection):
+        """Return a list of keys.
+        Args:
+            collection (str): the collection is the databasename
+        Returns:
+            object or None: List of keys, or None if no
+                            object found.
+        """
+        raise NotImplementedError
+
 
 class Memory:
     """A Memory object.
@@ -77,6 +87,20 @@ class Memory:
         """Create object with minimum properties."""
         self.databases = []
 
+    async def get_keys(self, collection):
+        """Return a list of keys.
+        Args:
+            collection (str): the collection is the databasename
+        Returns:
+            object or None: List of keys, or None if no
+                            object found.
+        """
+        _LOGGER.debug("Getting %s from memory.", collection)
+        results = []
+        for database in self.databases:
+            results.append(await database.get_keys(collection))
+        return results[0]
+
     async def get(self, collection, key):
         """Get data object for a given key.
         Gets the key value found in-memory or from the database(s).
@@ -87,11 +111,10 @@ class Memory:
             A data object for the given key, otherwise `None`.
         """
         _LOGGER.debug("Getting %s from memory.", collection, key)
-        database_result = await self._get_from_database(collection, key)
-        if database_result is not None:
-            return database_result
-
-        return None
+        results = []
+        for database in self.databases:
+            results.append(await database.get(collection, key))
+        return results[0]
 
     async def put(self, collection, key, data):
         """Put a data object to a given key.
@@ -102,36 +125,6 @@ class Memory:
             data (obj): Data object to store.
         """
         _LOGGER.debug("Putting %s to memory", collection, key)
-        await self._put_to_database(collection, key, data)
-
-    async def _get_from_database(self, collection, key):
-        """Get updates from databases for a given key.
-        Gets the first key value found from the database(s).
-        Args:
-            collection (str): database.
-            key (str): Key to retrieve data from a database.
-        Returns:
-            The first key value (data object) found from the database(s).
-            Or `None` when no database is defined or no value is found.
-        Todo:
-            * Handle multiple databases
-        """
-        if not self.databases:
-            return None
-
-        results = []
-        for database in self.databases:
-            results.append(await database.get(collection, key))
-        return results[0]
-
-    async def _put_to_database(self, collection, key, data):
-        """Put updates into databases for a given key.
-        Stores the key and value on each database defined.
-        Args:
-            collection (str): database.
-            key (str): Key for the data to store.
-            data (obj): Data object to store.
-        """
         if self.databases:
             for database in self.databases:
                 await database.put(collection, key, data)

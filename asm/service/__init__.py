@@ -14,7 +14,7 @@ def _service_decorator(func):
 
 class Service:
     """A service prototype to use when creating classy services."""
-    def __init__(self, asm, config, *args, **kwargs):
+    def __init__(self, config, asm, *args, **kwargs):
         """Create the service.
         Set some basic properties from the module.
         Args:

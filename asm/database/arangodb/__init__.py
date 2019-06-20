@@ -51,14 +51,11 @@ class DatabaseArangoDB(Database):
             data (object): the data to be inserted or replaced
         """
         logging.debug("Putting %s into arangodb", key)
-        if self.database.hasCollection(collection):
-            coll = self.database[collection]
-        else:
-            coll = self.database.createCollection(name=collection)
 
         save = False
         doc = await self.get(collection, key)
         if doc is None:
+            coll = await self._get_collection(collection)
             doc = coll.createDocument()
             doc._key = key
             save = True
@@ -78,12 +75,24 @@ class DatabaseArangoDB(Database):
             key (str): the key is key value
         """
         logging.debug("Getting %s from arangodb", key)
-        if self.database.hasCollection(collection):
-            coll = self.database[collection]
-        else:
-            coll = self.database.createCollection(name=collection)
+        coll = await self._get_collection(collection)
 
         try:
             return coll[key]
         except DocumentNotFoundError:
             return None
+
+    async def get_keys(self, collection):
+        """Return a list of keys.
+        Args:
+            collection (str): the collection is the databasename
+        Returns:
+            object or None: List of keys, or None if no
+                            object found.
+        """
+        return self.database.AQLQuery("FOR x IN " + collection + " RETURN x._key", rawResults=True, batchSize=100)
+
+    async def _get_collection(self, name):
+        if self.database.hasCollection(name):
+            return self.database[name]
+        return self.database.createCollection(name=name)

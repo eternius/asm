@@ -81,13 +81,13 @@ class ArcusServiceManager:
         self.modules = self.loader.load_modules_from_config(self.config)
         _LOGGER.debug("Loaded %i services", len(self.modules["services"]))
         self.get_functions(self.modules["services"])
+        if len(self.config['databases']) > 0:
+            self.start_databases(self.modules["databases"])
+
         self.setup_services(self.modules["services"])
 
         self.web_server = Web(self)
         self.web_server.setup_webhooks(self.services)
-
-        if len(self.config['databases']) > 0:
-            self.start_databases(self.modules["databases"])
 
         self.start_connectors(self.modules["connectors"])
         self.eventloop.create_task(self.web_server.start())
