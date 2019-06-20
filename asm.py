@@ -18,8 +18,9 @@ def main():
     with ArcusServiceManager() as service:
         if service_name == "operator":
             arango_root_password = os.getenv('ARANGO_ROOT_PASSWORD', "arcusarcus")
-            service.eventloop.run_until_complete(Operator().platform.deploy_core_platform(arango_root_password))
-            service.eventloop.run_until_complete(Operator().agent.deploy_agent('abot', 'es', ['abot']))
+            operator = Operator(arango_root_password)
+            service.eventloop.run_until_complete(operator.platform.deploy_core_platform())
+            service.eventloop.run_until_complete(operator.agent.deploy_agent('abot', 'es', ['abot']))
         service.load()
         service.run()
 

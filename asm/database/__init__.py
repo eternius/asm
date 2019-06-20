@@ -8,7 +8,7 @@ class Database:
     Database classes are used to persist key/value pairs in a database.
     """
 
-    def __init__(self, config, service=None):
+    def __init__(self, config, asm=None):
         """Create the database.
         Set some basic properties from the database config such as the name
         of this database. It could also be a good place to setup properties
@@ -20,7 +20,7 @@ class Database:
         """
         self.name = ""
         self.config = config
-        self.service = service
+        self.asm = asm
         self.client = None
         self.database = None
 

@@ -2,16 +2,17 @@
 """A module for asm to allow persist in arangodb database."""
 import logging
 from pyArango.connection import *
+from pyArango.theExceptions import DocumentNotFoundError
 
 from asm.database import Database
 
 
-class DatabaseMongo(Database):
+class DatabaseArangoDB(Database):
     """A module for service to allow memory to persist in a mongo database.
     Attributes:
     """
 
-    def __init__(self, config, service=None):
+    def __init__(self, config, asm=None):
         """Create the connection.
         Set some basic properties from the database config such as the name
         of this database.
@@ -19,7 +20,7 @@ class DatabaseMongo(Database):
             config (dict): The config for this database specified in the
                            `configuration.yaml` file.
         """
-        super().__init__(config, service=service)
+        super().__init__(config, asm=asm)
         logging.debug("Loaded arangodb database connector")
         self.name = "arangodb"
         self.config = config
@@ -36,7 +37,10 @@ class DatabaseMongo(Database):
         self.client = Connection(arangoURL="http://" + host + ":" + port,
                                  username=user,
                                  password=password)
-        self.database = self.client.createDatabase(name=database)
+        if database in self.client.databases:
+            self.database = self.client[database]
+        else:
+            self.database = self.client.createDatabase(name=database)
         logging.info("Connected to arangodb")
 
     async def put(self, collection, key, data):
@@ -47,13 +51,25 @@ class DatabaseMongo(Database):
             data (object): the data to be inserted or replaced
         """
         logging.debug("Putting %s into arangodb", key)
-        coll = self.database.createCollection(name=collection)
-        doc = coll.createDocument()
-        doc._key = key
+        if self.database.hasCollection(collection):
+            coll = self.database[collection]
+        else:
+            coll = self.database.createCollection(name=collection)
+
+        save = False
+        doc = await self.get(collection, key)
+        if doc is None:
+            doc = coll.createDocument()
+            doc._key = key
+            save = True
+
         for key, value in data.items():
             doc[key] = value
 
-        doc.save()
+        if save:
+            doc.save()
+        else:
+            doc.patch()
 
     async def get(self, collection, key):
         """Get a document from the database (key).
@@ -62,6 +78,12 @@ class DatabaseMongo(Database):
             key (str): the key is key value
         """
         logging.debug("Getting %s from arangodb", key)
-        coll = self.database.createCollection(name=collection)
+        if self.database.hasCollection(collection):
+            coll = self.database[collection]
+        else:
+            coll = self.database.createCollection(name=collection)
 
-        return coll.coll[key]
+        try:
+            return coll[key]
+        except DocumentNotFoundError:
+            return None

@@ -1,38 +1,45 @@
-import os
+import logging
+import asyncio
+
+from asm.operator.platform import Platform
+from asm.operator.skill import Skill
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class Agent:
-    def __init__(self, arango_root_password):
+    def __init__(self, spawner, arango_root_password):
         self.arango_root_password = arango_root_password
+        self.spawner = spawner
 
-    async def deploy_agent(self, name, language="en", skills=[], spawner=None):
-        config = {"services": [{"name": name,
-                                "skills": skills}],
-                  "databases": [],
-                  "connectors": [{"name": "mqtt"},
-                                 {"name": "websocket", "bot-name": name}]}
-        await self.create_service_config(name, config)
+    async def deploy_agent(self, name, language="en", skills=[]):
+        wait = False
 
-        await spawner.deploy_service(name,
-                                     "eternius/arcusservice:latest",
-                                     None,
-                                     {"ARCUS_SERVICE": name},
-                                     {"conf:" + name + ".yml": "/opt/arcus/conf/config.yml"},
-                                     {})
+        if not await self.spawner.exist_service(name):
+            _LOGGER.info("Deploying agent " + name)
+            config = {"services": [{"name": name,
+                                    "skills": skills}],
+                      "databases": [],
+                      "connectors": [{"name": "mqtt"},
+                                     {"name": "websocket", "bot-name": name}]}
+            await Platform.create_service_config(name, config)
 
+            await self.spawner.deploy_service(name,
+                                              "eternius/arcusservice:latest",
+                                              None,
+                                              {"ARCUS_SERVICE": name},
+                                              {"conf:" + name + ".yml": "/opt/arcus/conf/config.yml"},
+                                              {})
+        else:
+            container = await self.spawner.get_container(name)
+            if container.status != "running":
+                _LOGGER.info("Starting agent " + name)
+                container.start()
+
+        skill_manager = Skill(self.spawner, self.arango_root_password)
         for skill in skills:
-            # Create Skill service configuration
-            config = {"services": [{"name": "skill",
-                                    "skill-id": skill,
-                                    "language": language}],
-                      "databases": [{"name": "arangodb",
-                                     "password": self.arango_root_password}],
-                      "connectors": [{"name": "mqtt"}]}
-            await self.create_service_config("skill-" + skill, config)
+            await skill_manager.deploy_skill(skill, language)
 
-            await spawner.deploy_service("skill-" + skill,
-                                         "eternius/arcusservice:latest",
-                                         None,
-                                         {"ARCUS_SERVICE": "skill-" + skill},
-                                         {"conf:skill-" + skill + ".yml": "/opt/arcus/conf/config.yml"},
-                                         {})
+        if wait:
+            _LOGGER.info("Waiting for services to start")
+            await asyncio.sleep(20)

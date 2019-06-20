@@ -3,14 +3,13 @@ import logging
 import yaml
 import asyncio
 
-from asm.utils.spawners.dockerspawner import DockerSpawner
-
 _LOGGER = logging.getLogger(__name__)
 
 
 class Platform:
-    def __init__(self, arango_root_password):
+    def __init__(self, spawner, arango_root_password):
         self.arango_root_password = arango_root_password
+        self.spawner = spawner
 
     async def deploy_core_platform(self):
         with open("conf/core-services.yaml", 'r') as stream:
@@ -20,12 +19,9 @@ class Platform:
                 _LOGGER.error("Error loading config.yaml.", exc)
                 core_services = {"external-services": []}
 
-            if os.path.exists("/var/run/docker.sock"):
-                spawner = DockerSpawner()
-
             wait = False
             for service in core_services['external-services']:
-                if not await spawner.exist_service(service['name']):
+                if not await self.spawner.exist_service(service['name']):
                     _LOGGER.info("Deploying " + service['name'])
                     envvars = {}
                     for envvar in service['envvars']:
@@ -54,7 +50,7 @@ class Platform:
                             for key, value in port.items():
                                 ports[str(key) + '/tcp'] = int(value)
 
-                    await spawner.deploy_service(service['name'],
+                    await self.spawner.deploy_service(service['name'],
                                                  service['image'],
                                                  service['command'],
                                                  env,
@@ -62,11 +58,17 @@ class Platform:
                                                  ports)
 
                     wait = True
+                else:
+                    container = await self.spawner.get_container(service['name'])
+                    if container.status != "running":
+                        container.start()
+                        wait = True
 
             if wait:
                 _LOGGER.info("Waiting for services to start")
                 await asyncio.sleep(20)
 
+                # Create config.yml for operator
                 config = {"services": [{"name": "operator"}],
                           "databases": [{"name": "arangodb",
                                          "password": self.arango_root_password}],
