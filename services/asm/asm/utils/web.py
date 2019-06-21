@@ -110,23 +110,23 @@ class Web:
         """
         return web.Response(text=json.dumps(result), status=status)
 
-    def register_module(self, service, module, webhook):
+    def register_module(self, asm, service, webhook):
         """Register a new module in the web app router."""
 
-        async def wrapper(req, service=service, config=module.config):
+        async def wrapper(req, asm=asm):
             """Wrap up the aiohttp handler."""
             _LOGGER.info("Running module %s via webhook", webhook)
-            service.stats["webhooks_called"] = service.stats["webhooks_called"] + 1
-            resp = await module(service, config, req)
+            asm.stats["webhooks_called"] = asm.stats["webhooks_called"] + 1
+            resp = await service(req)
             if isinstance(resp, web.Response):
                 return resp
             return Web.build_response(200, {"called_module": webhook})
 
         self.web_app.router.add_post(
-            "/api/v1/{}/{}".format(module.config["name"], webhook), wrapper
+            "/api/v1/{}/{}".format(service.config["name"], webhook), wrapper
         )
         self.web_app.router.add_post(
-            "/api/v1/{}/{}/".format(module.config["name"], webhook), wrapper
+            "/api/v1/{}/{}/".format(service.config["name"], webhook), wrapper
         )
 
     def setup_webhooks(self, modules):

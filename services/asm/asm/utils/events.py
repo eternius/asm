@@ -179,8 +179,10 @@ class Message(Event):
             response = response_event
 
         if (
-            "thinking-delay" in self.connector.configuration
-            or "typing-delay" in self.connector.configuration
+            self.connector is not None and (
+                "thinking-delay" in self.connector.configuration
+                or "typing-delay" in self.connector.configuration
+            )
         ):
             await self._thinking_delay()
             if isinstance(response, Message):

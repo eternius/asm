@@ -224,7 +224,7 @@ class ArcusServiceManager:
                         and issubclass(cls, Service)
                         and cls is not Service
                 ):
-                    service = cls(service_module["config"], self)
+                    service = cls(self, service_module["config"])
                     services_list.append(service)
 
         if services_list:
