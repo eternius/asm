@@ -1,5 +1,5 @@
 venv/
 .idea/
-logs/
+services/asm/logs/
 *.pyc
-data/
+services/asm/data/abot

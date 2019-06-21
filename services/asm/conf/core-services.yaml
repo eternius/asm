@@ -1,0 +1,51 @@
+external-services:
+  - name: mqtt
+    envvars:
+      - MQTT_PASSWORD: arcusarcus
+    image: erlio/docker-vernemq:latest
+    env:
+      - DOCKER_VERNEMQ_USER_ARCUS: envvar-MQTT_PASSWORD
+    ports:
+      - 1883: 1883
+  - name: arangodb
+    envvars:
+      - ARANGO_ROOT_PASSWORD: arcusarcus
+    image: arangodb:latest
+    env:
+      - ARANGO_ROOT_PASSWORD: envvar-ARANGO_ROOT_PASSWORD
+    volumes:
+      - src: arangodb3
+        dst: /var/lib/arangodb3
+    ports:
+      - 8529: 8529
+  - name: postgres
+    image: postgres:10-alpine
+    env:
+      - POSTGRES_USER: synapse
+      - POSTGRES_PASSWORD: arcusarcus
+    volumes:
+      - src: postgresql
+        dst: /var/lib/postgresql/data
+  - name: matrix
+    image: matrixdotorg/synapse:latest
+    env:
+      - SYNAPSE_SERVER_NAME: local
+      - SYNAPSE_NO_TLS: 1
+      - SYNAPSE_REPORT_STATS: no
+      - SYNAPSE_ENABLE_REGISTRATION: yes
+      - POSTGRES_HOST: postgres
+      - POSTGRES_USER: synapse
+      - POSTGRES_PASSWORD: arcusarcus
+    volumes:
+      - src: matrix
+        dst: /data
+    ports:
+      - 8008: 8008
+  - name: riot
+    image: eternius/riot:latest
+  - name: nginx
+    image: eternius/ngix:latest
+    ports:
+      - 80: 80
+
+
