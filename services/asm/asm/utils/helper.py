@@ -1,10 +1,10 @@
-from asm.service import Service
-
-
+# pylint: disable=inconsistent-return-statements
 def get_service():
     """Return the running asm instance.
     Returns:
         object: asm instance.
     """
-    if len(Service.instances) == 1:
-        return Service.instances[0]
+    from asm.manager import ArcusServiceManager
+
+    if len(ArcusServiceManager.instances) == 1:
+        return ArcusServiceManager.instances[0]

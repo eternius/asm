@@ -6,6 +6,7 @@ import weakref
 import asyncio
 import contextlib
 import logging
+import inspect
 
 from asm.utils.web import Web
 from asm.utils.loader import Loader
@@ -13,6 +14,7 @@ from asm.connector import Connector
 from asm.service import Service
 from asm.database import Database
 from asm.database import Memory
+from asm.utils import events
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -43,6 +45,13 @@ class ArcusServiceManager:
         self.connectors = []
         self.connector_tasks = []
         self.loader = Loader(self)
+
+        self.stats = {
+            "messages_parsed": 0,
+            "webhooks_called": 0,
+            "total_response_time": 0,
+            "total_responses": 0,
+        }
 
     def __enter__(self):
         """Add self to existing instances."""
@@ -77,7 +86,7 @@ class ArcusServiceManager:
         await self.unload()
 
     def load(self):
-        self.config = self.loader.load_config_from_file()
+        self.config = self.loader.load_config_from_file(self.name)
         self.modules = self.loader.load_modules_from_config(self.config)
         _LOGGER.debug("Loaded %i services", len(self.modules["services"]))
         self.get_functions(self.modules["services"])
@@ -99,7 +108,7 @@ class ArcusServiceManager:
 
         _LOGGER.info("Removing services...")
         for service in self.services:
-            _LOGGER.info("Removed %s", service.config["name"])
+            _LOGGER.info("Removed %s", service)
             self.services.remove(service)
 
         for connector in self.connectors:
@@ -183,13 +192,13 @@ class ArcusServiceManager:
         else:
             self.critical("All connectors failed to load", 1)
 
-    def get_functions(self, services):
+    def get_functions(self, services_list):
         """Iterates through all the services which have been loaded and get
         functions which have been defined in the service.
         Args:
-            services (list): A list of all the loaded services.
+            services_list (list): A list of all the loaded services.
         """
-        for service in services:
+        for service in services_list:
             for func in service["module"].__dict__.values():
                 if isinstance(func, type) and issubclass(func, Service) and func != Service:
                     service_obj = func(self, service["config"])
@@ -237,3 +246,52 @@ class ArcusServiceManager:
                     database = cls(database_module["config"])
                     self.memory.databases.append(database)
                     self.eventloop.run_until_complete(database.connect())
+
+    async def parse(self, event):
+        """Parse a string against all skills."""
+        self.stats["messages_parsed"] = self.stats["messages_parsed"] + 1
+        tasks = []
+        if isinstance(event, events.Event):
+            _LOGGER.debug("Parsing input: %s", event)
+
+            tasks.append(self.eventloop.create_task(self.run_service(self.services[0],
+                                                                     self.services[0].config,
+                                                                     event)))
+        return tasks
+
+    async def run_service(self, service, config, message):
+        """Execute a service."""
+        # pylint: disable=broad-except
+        # We want to catch all exceptions coming from a service module and not
+        # halt the application. If a skill throws an exception it just doesn't
+        # give a response to the user, so an error response should be given.
+        try:
+            if len(inspect.signature(service).parameters.keys()) > 1:
+                await service(self, config, message)
+            else:
+                await service(message)
+        except Exception:
+            if message:
+                await message.respond(
+                    events.Message("Whoops there has been an error")
+                )
+                await message.respond(events.Message("Check the log for details"))
+
+            _LOGGER.exception("Exception when running skill '%s' ", str(config["name"]))
+
+    async def send(self, event):
+        """Send an event.
+        If ``event.connector`` is not set this method will use
+        `ArcusServiceManager.default_connector`. If ``event.connector`` is a string, it
+        will be resolved to the name of the connectors configured in this
+        instance.
+        Args:
+            event (asm.events.Event): The event to send.
+        """
+        if isinstance(event.connector, str):
+            event.connector = self._connector_names[event.connector]
+
+        if not event.connector:
+            event.connector = self.default_connector
+
+        return await event.connector.send(event)

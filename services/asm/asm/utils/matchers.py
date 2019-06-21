@@ -1,12 +1,12 @@
 def add_service_attributes(func):
-    """Add the attributes which makes a function a module.
+    """Add the attributes which makes a function a service.
     Args:
-        func (func): Module function.
+        func (func): Service function.
     Returns:
         func: The module function with the new attributes.
     """
-    if not hasattr(func, "module"):
-        func.module = True
+    if not hasattr(func, "service"):
+        func.service = True
     if not hasattr(func, "matchers"):
         func.matchers = []
     if not hasattr(func, "constraints"):

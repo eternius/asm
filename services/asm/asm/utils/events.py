@@ -8,9 +8,7 @@ from datetime import datetime
 import aiohttp
 import puremagic
 from get_image_size import get_image_size_from_bytesio
-
 from asm.utils.helper import get_service
-
 
 # pylint: disable=bad-mcs-classmethod-argument,arguments-differ
 class EventMetaClass(ABCMeta):

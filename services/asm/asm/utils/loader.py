@@ -94,8 +94,12 @@ class Loader:
         return loaded_modules
 
     @staticmethod
-    def load_config_from_file():
-        with open("/opt/arcus/conf/config.yml", 'r') as stream:
+    def load_config_from_file(name):
+        cfg_file = '/opt/arcus/conf/config.yml'
+        if not os.path.exists(cfg_file):
+            cfg_file = '/opt/arcus/conf/' + name + '.yml'
+
+        with open(cfg_file, 'r') as stream:
             try:
                 return yaml.safe_load(stream)
             except yaml.YAMLError as exc:
