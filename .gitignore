@@ -3,3 +3,4 @@ venv/
 services/asm/logs/
 *.pyc
 services/asm/data/abot
+services/asm/asm/function/

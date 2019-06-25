@@ -42,4 +42,3 @@ class Skill(Service):
                 for matcher in nlp.matchers:
                     if "generic_action" in matcher:
                         return web.json_response(await self.asm.run_nlp(nlp, nlp.config, request))
-

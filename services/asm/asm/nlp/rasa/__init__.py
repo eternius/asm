@@ -107,12 +107,13 @@ class Rasa(NLP):
         policy_ensemble = SimplePolicyEnsemble.load("data/" + self.config['skill-id'] + "/core")
         interpreter = LocalNLUInterpreter(request)
 
+        url = 'http://localhost:8080/api/v1/skill/generic_action'
         processor = MessageProcessor(interpreter,
                                      policy_ensemble,
                                      domain,
                                      tracker_store,
                                      nlg,
-                                     action_endpoint=EndpointConfig('http://localhost:8080/api/v1/skill/generic_action'),
+                                     action_endpoint=EndpointConfig(url),
                                      message_preprocessor=None)
 
         message_nlu = UserMessage(request['text'], None, request['user'], input_channel=request['channel'])

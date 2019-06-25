@@ -16,6 +16,8 @@ from asm.utils.function.context import Context
 from asm.utils.function.event import Event
 from asm.utils.function.logger import Logger
 
+_LOGGER = logging.getLogger(__name__)
+
 
 class GenericFormAction(FormAction):
     """Example of a custom form action"""
@@ -142,7 +144,7 @@ class GenericFormAction(FormAction):
                         validation_output = {slot: '@' + tracker.latest_message['intent']['name']}
                 elif field['validation_function'] is not None:
                     result = self.call_function(field['validation_function'], {"value": value})
-                    if result['valid']:
+                    if result and result['valid']:
                         validation_output = {slot: result['value']}
 
                 if len(validation_output) == 0:
@@ -173,9 +175,9 @@ class GenericFormAction(FormAction):
             module_spec = None
 
             try:
-                module_spec = importlib.util.find_spec("abot.function." + function_name)
+                module_spec = importlib.util.find_spec("asm.utils.function." + function_name)
             except (ImportError, AttributeError):
-                print("Error loading function " + function_name)
+                _LOGGER.debug("Error loading function '{}'".format(function_name))
 
             if module_spec:
                 module = Loader.import_module_from_spec(module_spec)
