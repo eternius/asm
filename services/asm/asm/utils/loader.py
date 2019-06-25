@@ -128,7 +128,8 @@ class Loader:
         else:
             self.asm.critical("No services in configuration, at least 1 required"), 1
 
-        connectors = self._load_modules("connector", config["connectors"])
+        if config['connectors'] is not None:
+            connectors = self._load_modules("connector", config["connectors"])
 
         return {"connectors": connectors, "databases": databases, "services": services}
 

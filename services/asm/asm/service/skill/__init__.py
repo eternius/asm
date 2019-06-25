@@ -95,34 +95,37 @@ class Skill(Service):
             domain.persist("data/" + self.config['skill-id'] + "/core/model")
             domain.persist_specification("data/" + self.config['skill-id'] + "/core")
 
-    @match_service('')
+    @match_webhook('next_step')
     async def next_step(self, message):
-        if self.config.get('domain') is None:
-            self.config.setdefault('domain', Domain.from_file("data/" + self.config['skill-id'] + "/core/model"))
-            self.config.setdefault('tracker_store', InMemoryTrackerStore(self.config.get('domain')))
+        if type(message) is not Message and type(message) is Request:
+            # Capture the request POST data and set message to a default message
+            request = await message.json()
+            if self.config.get('domain') is None:
+                self.config.setdefault('domain', Domain.from_file("data/" + self.config['skill-id'] + "/core/model"))
+                self.config.setdefault('tracker_store', InMemoryTrackerStore(self.config.get('domain')))
 
-        domain = self.config.get('domain')
-        tracker_store = self.config.get('tracker_store')
-        nlg = NaturalLanguageGenerator.create(None, domain)
-        policy_ensemble = SimplePolicyEnsemble.load("data/" + self.config['skill-id'] + "/core")
-        interpreter = LocalNLUInterpreter(message.nlu)
+            domain = self.config.get('domain')
+            tracker_store = self.config.get('tracker_store')
+            nlg = NaturalLanguageGenerator.create(None, domain)
+            policy_ensemble = SimplePolicyEnsemble.load("data/" + self.config['skill-id'] + "/core")
+            interpreter = LocalNLUInterpreter(request)
 
-        processor = MessageProcessor(interpreter,
-                                     policy_ensemble,
-                                     domain,
-                                     tracker_store,
-                                     nlg,
-                                     action_endpoint=EndpointConfig('http://127.0.0.1:8080/v1/api/skill/genericaction'),
-                                     message_preprocessor=None)
+            processor = MessageProcessor(interpreter,
+                                         policy_ensemble,
+                                         domain,
+                                         tracker_store,
+                                         nlg,
+                                         action_endpoint=EndpointConfig('http://localhost:8080/api/v1/skill/genericaction'),
+                                         message_preprocessor=None)
 
-        message_nlu = UserMessage(message.text, None, message.user, input_channel=message.connector.name)
+            message_nlu = UserMessage(request['text'], None, request['user'], input_channel=request['channel'])
 
-        result = await processor.handle_message(message_nlu)
-        if result is not None and len(result) > 0:
-            await message.respond(result[0]['text'])
-        else:
-            _LOGGER.info(result)
-            await message.respond(message.anything_else)
+            result = await processor.handle_message(message_nlu)
+            if result is not None and len(result) > 0:
+                return web.json_response({"text": result[0]['text']})
+            else:
+                _LOGGER.info(result)
+                return web.json_response({"text": message.anything_else})
 
     @match_webhook('parse')
     async def parse(self, message):
@@ -142,7 +145,7 @@ class Skill(Service):
                 return web.json_response(result)
 
     @match_webhook("genericaction")
-    async def genericaction(self, bot, config, message):
+    async def genericaction(self, message):
         if type(message) is not Message and type(message) is Request:
             # Capture the request POST data and set message to a default message
             request = await message.json()
@@ -158,12 +161,12 @@ class Skill(Service):
 
             if action_name.endswith("_form"):
                 intent_id = action_name[:-5]
-                intent = await self.bot.memory.get(intent_id)
+                intent = await self.asm.memory.get(self.config['skill-id'] + "_intents", intent_id)
                 gfa = GenericFormAction()
                 gfa.set_name(action_name)
                 gfa.set_intent(intent)
                 gfa.set_domain(domain)
-                gfa.set_memory(self.bot.memory)
+                gfa.set_memory(self.asm.memory)
                 events = gfa.run(dispatcher, tracker, domain)
 
             if not events:

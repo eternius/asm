@@ -99,7 +99,8 @@ class ArcusServiceManager:
         self.web_server.setup_webhooks(self.services)
 
         asyncio.set_event_loop(self.eventloop)
-        self.start_connectors(self.modules["connectors"])
+        if self.modules["connectors"] is not None:
+            self.start_connectors(self.modules["connectors"])
         self.eventloop.create_task(self.web_server.start())
 
     async def unload(self, future=None):
@@ -111,11 +112,12 @@ class ArcusServiceManager:
             _LOGGER.info("Removed %s", service)
             self.services.remove(service)
 
-        for connector in self.connectors:
-            _LOGGER.info("Stopping connector %s...", connector.name)
-            await connector.disconnect()
-            self.connectors.remove(connector)
-            _LOGGER.info("Stopped connector %s", connector.name)
+        if self.connectors is not None:
+            for connector in self.connectors:
+                _LOGGER.info("Stopping connector %s...", connector.name)
+                await connector.disconnect()
+                self.connectors.remove(connector)
+                _LOGGER.info("Stopped connector %s", connector.name)
 
         if len(self.config['databases']) > 0:
             for database in self.memory.databases:

@@ -19,35 +19,16 @@ class Agent:
         wait = False
 
         if not await self.spawner.exist_service(name):
-            client = MatrixClient("http://matrix")
-            password = ''.join(random.choice(string.ascii_lowercase) for i in range(20))
-
-            try:
-                token = client.register_with_password(username=name, password=password)
-
-                _LOGGER.info("Creating bot in matrix - token = " + token)
-            except MatrixRequestError:
-                _LOGGER.info("Error creating bot in matrix ")
-
-            if name == 'abot':
-                try:
-                    client.create_room(name="bots", invitees="@" + name + ":local")
-                    _LOGGER.info("Creating room bots")
-                except MatrixRequestError:
-                    _LOGGER.info("Error creating room bots")
-
             _LOGGER.info("Deploying agent " + name)
             config = {"services": [{"name": 'agent',
                                     "agent-name": name,
                                     "skills": skills}],
                       "databases": [],
-                      "connectors": [{"name": "mqtt"},
-                                     {"name": "matrix",
-                                      "nick": name,
-                                      "mxid": "@" + name + ":local",
-                                      "password": password,
-                                      "room": "@bots:local",
-                                      "homeserver": "http://matrix:8008"}]}
+                      "connectors": [{"name": "slack",
+                                      "api-token": "xoxb-101051548259-668871292337-5brywD6tOvvI7bjsJOxLVae7",
+                                      "bot-name": "abot",
+                                      "default-room": "#general",
+                                      "icon-emoji": ":robot_face:"}]}
             await Platform.create_service_config(name, config)
 
             await self.spawner.deploy_service(name,
