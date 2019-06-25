@@ -3,6 +3,7 @@ import logging
 import nltk
 
 from asm.nlp import NLP
+from asm.nlp.rasa.arcus_tracker_store import ArcusTrackerStore
 from asm.nlp.rasa.generate_stories import GenerateStories
 from asm.nlp.rasa.local_nlu_interpreter import LocalNLUInterpreter
 from asm.nlp.rasa.generic_form_action import GenericFormAction
@@ -15,7 +16,6 @@ from rasa.core.interpreter import RegexInterpreter
 from rasa.core.training.structures import StoryGraph
 from rasa.core.training.generator import TrainingDataGenerator
 from rasa.core.training.dsl import StoryFileReader
-from rasa.core.tracker_store import InMemoryTrackerStore
 from rasa.utils.endpoints import EndpointConfig
 from rasa.core.nlg import NaturalLanguageGenerator
 from rasa.core.processor import MessageProcessor
@@ -99,7 +99,8 @@ class Rasa(NLP):
         """
         if self.config.get('domain') is None:
             self.config.setdefault('domain', Domain.from_file("data/" + self.config['skill-id'] + "/core/model"))
-            self.config.setdefault('tracker_store', InMemoryTrackerStore(self.config.get('domain')))
+            self.config.setdefault('tracker_store', ArcusTrackerStore(self.config.get('domain'),
+                                                                      self.asm))
 
         domain = self.config.get('domain')
         tracker_store = self.config.get('tracker_store')

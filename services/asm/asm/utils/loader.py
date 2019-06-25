@@ -120,15 +120,15 @@ class Loader:
 
         connectors, databases, modules, nlp = None, None, None, None
 
-        if "databases" in config.keys() and config["databases"]:
+        if "databases" in config and config["databases"]:
             databases = self._load_modules("database", config["databases"])
 
-        if "services" in config.keys() and config["services"]:
+        if "services" in config and config["services"]:
             services = self._load_modules("service", config["services"])
         else:
             self.asm.critical("No services in configuration, at least 1 required"), 1
 
-        if "nlp" in config.keys() and config["nlp"]:
+        if "nlp" in config and config["nlp"]:
             nlp = self._load_modules("nlp", config["nlp"])
 
         if config['connectors'] is not None:

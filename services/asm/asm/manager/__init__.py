@@ -324,7 +324,7 @@ class ArcusServiceManager:
         # halt the application. If a skill throws an exception it just doesn't
         # give a response to the user, so an error response should be given.
         try:
-            if len(inspect.signature(service).parameters.keys()) > 1:
+            if len(inspect.signature(service).parameters.keys) > 1:
                 await service(self, config, message)
             else:
                 await service(message)
@@ -344,10 +344,7 @@ class ArcusServiceManager:
         # halt the application. If a skill throws an exception it just doesn't
         # give a response to the user, so an error response should be given.
         try:
-            if len(inspect.signature(nlp).parameters.keys()) > 1:
-                return await nlp(self, config, message)
-            else:
-                return await nlp(message)
+            return await nlp(message)
         except Exception:
             _LOGGER.exception("Exception when running nlp engine '%s' ", str(config["name"]))
             return None
