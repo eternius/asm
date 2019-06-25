@@ -8,6 +8,7 @@ import contextlib
 import logging
 import inspect
 
+from asm.nlp import NLP
 from asm.utils.web import Web
 from asm.utils.loader import Loader
 from asm.connector import Connector
@@ -39,6 +40,7 @@ class ArcusServiceManager:
                     sig, lambda: asyncio.ensure_future(self.handle_signal())
                 )
 
+        self.nlps = []
         self.config = {}
         self.services = []
         self.services_tasks = []
@@ -90,10 +92,17 @@ class ArcusServiceManager:
         self.modules = self.loader.load_modules_from_config(self.config)
         _LOGGER.debug("Loaded %i services", len(self.modules["services"]))
         self.get_functions(self.modules["services"])
+
+        if 'nlp' in self.config:
+            _LOGGER.debug("Loaded %i nlp engines", len(self.modules["nlp"]))
+            self.get_nlp_engine(self.modules["nlp"])
+
         if len(self.config['databases']) > 0:
             self.start_databases(self.modules["databases"])
 
         self.setup_services(self.modules["services"])
+        if 'nlp' in self.config:
+            self.train_nlp_engine(self.modules["nlp"])
 
         self.web_server = Web(self)
         self.web_server.setup_webhooks(self.services)
@@ -118,6 +127,12 @@ class ArcusServiceManager:
                 await connector.disconnect()
                 self.connectors.remove(connector)
                 _LOGGER.info("Stopped connector %s", connector.name)
+
+        if 'nlp' in self.config:
+            _LOGGER.info("Removing nlp engine...")
+            for nlp in self.nlps:
+                _LOGGER.info("Removed %s", nlp)
+                self.nlps.remove(nlp)
 
         if len(self.config['databases']) > 0:
             for database in self.memory.databases:
@@ -216,6 +231,28 @@ class ArcusServiceManager:
 
                     continue
 
+    def get_nlp_engine(self, services_list):
+        """Iterates through all the nlp engines which have been loaded and get
+        functions which have been defined in the nlp engine.
+        Args:
+            services_list (list): A list of all the loaded nlp engines.
+        """
+        for service in services_list:
+            for func in service["module"].__dict__.values():
+                if isinstance(func, type) and issubclass(func, NLP) and func != NLP:
+                    service_obj = func(self, service["config"])
+
+                    for name in service_obj.__dir__():
+                        try:
+                            method = getattr(service_obj, name)
+                        except Exception:
+                            continue
+
+                        if hasattr(method, "nlp"):
+                            self.nlps.append(method)
+
+                    continue
+
     def setup_services(self, modules):
         """Call setup method for the services."""
         services_list = []
@@ -234,6 +271,25 @@ class ArcusServiceManager:
                 self.eventloop.run_until_complete(service.setup())
         else:
             self.critical("All services failed to setup", 1)
+
+    def train_nlp_engine(self, modules):
+        """Call train method for the nlp engine."""
+        nlp_engines_list = []
+        for nlp_engine_module in modules:
+            for _, cls in nlp_engine_module["module"].__dict__.items():
+                if (
+                        isinstance(cls, type)
+                        and issubclass(cls, NLP)
+                        and cls is not NLP
+                ):
+                    nlp = cls(self, nlp_engine_module["config"])
+                    nlp_engines_list.append(nlp)
+
+        if nlp_engines_list:
+            for nlp_engine in nlp_engines_list:
+                self.eventloop.run_until_complete(nlp_engine.train())
+        else:
+            self.critical("All nlp engines failed to train", 1)
 
     def start_databases(self, databases):
         """Start the databases."""
@@ -280,6 +336,21 @@ class ArcusServiceManager:
                 await message.respond(events.Message("Check the log for details"))
 
             _LOGGER.exception("Exception when running skill '%s' ", str(config["name"]))
+
+    async def run_nlp(self, nlp, config, message):
+        """Execute a service."""
+        # pylint: disable=broad-except
+        # We want to catch all exceptions coming from a service module and not
+        # halt the application. If a skill throws an exception it just doesn't
+        # give a response to the user, so an error response should be given.
+        try:
+            if len(inspect.signature(nlp).parameters.keys()) > 1:
+                return await nlp(self, config, message)
+            else:
+                return await nlp(message)
+        except Exception:
+            _LOGGER.exception("Exception when running nlp engine '%s' ", str(config["name"]))
+            return None
 
     async def send(self, event):
         """Send an event.

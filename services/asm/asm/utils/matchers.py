@@ -7,6 +7,8 @@ def add_service_attributes(func):
     """
     if not hasattr(func, "service"):
         func.service = True
+    if not hasattr(func, "nlp"):
+        func.nlp = True
     if not hasattr(func, "matchers"):
         func.matchers = []
     if not hasattr(func, "constraints"):
@@ -59,6 +61,58 @@ def match_service(service):
         """Add decorated function to modules list for service matching."""
         func = add_service_attributes(func)
         func.matchers.append({"service_type": service})
+
+        return func
+
+    return matcher
+
+
+def match_nlp_train():
+    """Return nlp_train match decorator."""
+
+    def matcher(func):
+        """Add decorated function to modules list for nlp_train matching."""
+        func = add_service_attributes(func)
+        func.matchers.append({"nlp_train": True})
+
+        return func
+
+    return matcher
+
+
+def match_parse_text():
+    """Return parse_text match decorator."""
+
+    def matcher(func):
+        """Add decorated function to modules list for parse_text matching."""
+        func = add_service_attributes(func)
+        func.matchers.append({"parse_text": True})
+
+        return func
+
+    return matcher
+
+
+def match_get_response():
+    """Return get_response match decorator."""
+
+    def matcher(func):
+        """Add decorated function to modules list for get_response matching."""
+        func = add_service_attributes(func)
+        func.matchers.append({"get_response": True})
+
+        return func
+
+    return matcher
+
+
+def match_generic_action():
+    """Return generic_action match decorator."""
+
+    def matcher(func):
+        """Add decorated function to modules list for generic_action matching."""
+        func = add_service_attributes(func)
+        func.matchers.append({"generic_action": True})
 
         return func
 

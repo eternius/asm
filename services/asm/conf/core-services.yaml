@@ -47,5 +47,9 @@ external-services:
     image: eternius/ngix:latest
     ports:
       - 80: 80
+  - name: duckling
+    image: eternius/duckling:latest
+    ports:
+      - 8000: 8000
 
 

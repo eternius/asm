@@ -118,7 +118,7 @@ class Loader:
 
         _LOGGER.debug("Loading modules from config...")
 
-        connectors, databases, modules = None, None, None
+        connectors, databases, modules, nlp = None, None, None, None
 
         if "databases" in config.keys() and config["databases"]:
             databases = self._load_modules("database", config["databases"])
@@ -128,10 +128,13 @@ class Loader:
         else:
             self.asm.critical("No services in configuration, at least 1 required"), 1
 
+        if "nlp" in config.keys() and config["nlp"]:
+            nlp = self._load_modules("nlp", config["nlp"])
+
         if config['connectors'] is not None:
             connectors = self._load_modules("connector", config["connectors"])
 
-        return {"connectors": connectors, "databases": databases, "services": services}
+        return {"connectors": connectors, "databases": databases, "services": services, "nlp": nlp}
 
     @staticmethod
     def build_module_import_path(config):

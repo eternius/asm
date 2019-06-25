@@ -3,7 +3,7 @@ import asyncio
 
 
 async def main():
-    dialog = ["quiero cotizacion seguro", "31012"]
+    dialog = ["Quiero un estudio", "31012"]
     skills = ["abot"]
     user = "test"
     channel = "slack"
@@ -21,16 +21,19 @@ async def main():
                         best_skill = skill
                         best_skill_data = result
 
-        best_skill_data['user'] = user
-        best_skill_data['channel'] = channel
+        if best_skill_data:
+            best_skill_data['user'] = user
+            best_skill_data['channel'] = channel
 
-        if debug:
-            print(best_skill_data)
-        async with aiohttp.ClientSession() as session:
-            async with session.post('http://localhost:8080/api/v1/skill/next_step',
-                                    json=best_skill_data) as resp:
-                result = await resp.json()
-                print(result['text'])
+            if debug:
+                print(best_skill_data)
+            async with aiohttp.ClientSession() as session:
+                async with session.post('http://localhost:8080/api/v1/skill/next_step',
+                                        json=best_skill_data) as resp:
+                    result = await resp.json()
+                    print(result['text'])
+        else:
+            print("Error calling parse")
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
