@@ -19,3 +19,4 @@ matrix-api-async==0.1.0
 bleach==3.1.0
 emoji==0.5.2
 nest-asyncio==1.0.0
+tensorflow-hub==0.5.0
