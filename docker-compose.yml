@@ -1,0 +1,25 @@
+version: "3"
+services:
+  duckling:
+    image: arcusplatformnet/duckling:0.1.0
+    networks:
+      - arcus
+    ports:
+      - "8000:8000"
+      -
+  arangodb:
+    image: arangodb:latest
+    environment:
+      ARANGO_ROOT_PASSWORD: arcus2arcus
+    volumes:
+      - arangodb:/var/lib/arangodb3
+    networks:
+      - arcus
+    ports:
+      - "8529:8529"
+      -
+networks:
+    arcus:
+
+volumes:
+    arangodb:
