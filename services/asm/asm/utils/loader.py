@@ -65,9 +65,7 @@ class Loader:
             # We might load from a configuration file an item that is just
             # a string, rather than a mapping object
             if not isinstance(config, Mapping):
-                config = {}
-                config["name"] = module
-                config["module"] = ""
+                config = {"name": module, "module": ""}
             else:
                 config["name"] = module["name"]
                 config["module"] = module.get("module", "")
@@ -95,9 +93,12 @@ class Loader:
 
     @staticmethod
     def load_config_from_file(name):
-        cfg_file = '/opt/arcus/conf/config.yml'
-        if not os.path.exists(cfg_file):
-            cfg_file = '/opt/arcus/conf/' + name + '.yml'
+        cfg_file = ''
+        cfg_file_list = ['config.yml', name + '.yml', '/opt/arcus/conf/config.yml', '/opt/arcus/conf/' + name + '.yml']
+        for conf in cfg_file_list:
+            if os.path.exists(conf):
+                cfg_file = conf
+                break
 
         with open(cfg_file, 'r') as stream:
             try:
@@ -131,7 +132,7 @@ class Loader:
         if "nlp" in config and config["nlp"]:
             nlp = self._load_modules("nlp", config["nlp"])
 
-        if config['connectors'] is not None:
+        if "connectors" in config and config['connectors']:
             connectors = self._load_modules("connector", config["connectors"])
 
         return {"connectors": connectors, "databases": databases, "services": services, "nlp": nlp}

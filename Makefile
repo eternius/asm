@@ -1,5 +1,5 @@
-PROJECT_REPO=eternius
-VERSION=latest
+PROJECT_REPO=arcusplatformnet
+VERSION=0.1.0
 
 build:
 	docker build -t ${PROJECT_REPO}/duckling:${VERSION} services/duckling

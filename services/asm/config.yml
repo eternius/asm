@@ -1,0 +1,27 @@
+services:
+  - name: skill
+    skill-id: skill-abot
+    language: es
+databases:
+  - name: mongo
+    host: 127.0.0.1
+    port: 27017
+    database: admin
+nlp:
+  - name: arcus
+    skill-id: abot
+    language: es
+    pipeline:
+    - name: WhitespaceTokenizer
+    - name: CRFEntityExtractor
+    - name: EntitySynonymMapper
+    - name: CountVectorsFeaturizer
+      token_pattern: (?u)\b\w+\b
+    - name: asm.nlp.arcus.nlu.classifiers.BertIntentClassifier
+      epochs: 10
+      batch_size: 64
+    policies:
+    - name: FallbackPolicy
+    - name: MemoizationPolicy
+    - name: FormPolicy
+    - name: MappingPolicy

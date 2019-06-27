@@ -32,9 +32,14 @@ class ArcusTrackerStore(TrackerStore):
         tracker = asyncio.get_event_loop().run_until_complete(self.asm.memory.get("rasa_tracker", sender_id))
         if tracker:
             _LOGGER.debug("Recreating tracker for id '{}'".format(sender_id))
-            return DialogueStateTracker.from_dict(
-                sender_id, tracker.getStore()['events'], self.domain.slots
-            )
+            if isinstance(tracker, dict):
+                return DialogueStateTracker.from_dict(
+                    sender_id, tracker['events'], self.domain.slots
+                )
+            else:
+                return DialogueStateTracker.from_dict(
+                    sender_id, tracker.getStore()['events'], self.domain.slots
+                )
         else:
             _LOGGER.debug("Creating a new tracker for id '{}'.".format(sender_id))
             return None
